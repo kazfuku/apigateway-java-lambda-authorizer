@@ -1,16 +1,19 @@
 import * as cdk from '@aws-cdk/core';
 import * as apigateway from '@aws-cdk/aws-apigateway';
 import * as lambda from '@aws-cdk/aws-lambda';
-import { IdentitySource } from '@aws-cdk/aws-apigateway';
+import * as logs from '@aws-cdk/aws-logs';
 
 export class ApigatewayJavaLambdaAuthorizerStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
+    const accessLogGroup = new logs.LogGroup(this, 'AccessLog');
     const api = new apigateway.RestApi(this, 'Api', {
       deployOptions: {
         loggingLevel: apigateway.MethodLoggingLevel.INFO,
-        dataTraceEnabled: true
+        dataTraceEnabled: true,
+        accessLogDestination: new apigateway.LogGroupLogDestination(accessLogGroup),
+        accessLogFormat: apigateway.AccessLogFormat.clf()
       }
     });
 
@@ -22,7 +25,7 @@ export class ApigatewayJavaLambdaAuthorizerStack extends cdk.Stack {
     });
     const lambdaAuthorizer = new apigateway.RequestAuthorizer(this, 'Authorizer', {
       handler: authorizerFunction,
-      identitySources: [IdentitySource.header('Authorization')]
+      identitySources: [apigateway.IdentitySource.header('Authorization')]
     });
 
     const mockIntegration = new apigateway.MockIntegration({
